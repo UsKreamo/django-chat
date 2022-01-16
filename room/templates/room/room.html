@@ -9,26 +9,47 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <div class="container">
-        <div id="join_screen">
-            <h1>ロビー</h1>
+    <!-- ロビー -->
+    <div id="join_screen">
+        <div class="container">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
+                <div class="container-fluid">
+                    <h1 class="navbar-brand">ロビー</h1>
+                </div>
+            </nav>            
             <form action="" onsubmit="onsubmitButton_JoinChat(); return false;" style="text-align: center; width: 100%;">
-                名前<br />
-                <input type="text" id="input_username" placeholder="名前を入力" autofocus><br /><br />
-                <input type="submit" value="入室" />
+                <div class="mb-3">
+                    <input type="text" id="input_username" class="form-control" placeholder="名前を入力" autofocus>
+                </div>
+                <input type="submit" class="btn btn-success" value="入室" />
             </form>
-        </div>
-
-        <div id="chat_screen" class="d-none">
-            <h1>チャットルーム</h1>
-            <button onclick="onclickButton_LeaveChat()">退室</button>
-            名前 : <input type="text" id="text_username" readonly="readonly"><br />
-            <form action="" onsubmit="onsubmitButton_Send();return false;">
-                メッセージ : <input type="text" id="input_message" placeholder="メッセージを入力" autocomplete="off" autofocus /><input type="submit" value="送信" />
-            </form>
-            <ul id="list_message"></ul>
         </div>
     </div>
+    <!-- チャットルーム -->
+    <div id="chat_screen" class="d-none">
+        <div class="container">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
+                <div class="container-fluid">
+                    <h1 class="navbar-brand">チャットルーム</h1>
+                </div>
+            </nav>            
+            <div class="mb-3 text-end">
+                <button class="btn btn-danger" onclick="onclickButton_LeaveChat()">退室</button>
+            </div>
+            <div class="mb-3">
+                <ul id="list_message" class="list-group-flush p-0"></ul>
+            </div>
+            <form action="" onsubmit="onsubmitButton_Send();return false;">
+                <div class="input-group mb-3">
+                    <span id="text_username" class="input-group-text"></span>
+                    <input type="text" id="input_message" class="form-control" placeholder="メッセージを入力" autocomplete="off" autofocus  aria-describedby="input_message_btn" />
+                    <input type="submit" id="input_message_btn"  class="btn btn-success" value="送信" />
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
 
 <script>
     // ----------
@@ -56,7 +77,7 @@
         if(!strInputUserName){
             return;
         }
-        g_elementTextUserName.value = strInputUserName;
+        g_elementTextUserName.innerText = strInputUserName;
         // 入室（サーバ送信）
         g_socket.send(JSON.stringify({"data_type": "join", "username": strInputUserName}));
         // 表示切り替え
@@ -76,7 +97,7 @@
             g_elementListMessage.removeChild(g_elementListMessage.firstChild);
         }
         // 名前クリア
-        g_elementTextUserName.value = "";
+        g_elementTextUserName.innerText = "";
         // 退室（サーバ送信）
         g_socket.send(JSON.stringify({"data_type": "leave"}));
         // 表示切り替え
@@ -99,7 +120,7 @@
     }
     // メッセージ受信
     g_socket.onmessage = (event) => {
-        if(!g_elementTextUserName.value){
+        if(!g_elementTextUserName.innerText){
             return;
         }
         // メッセージを取得
@@ -108,6 +129,7 @@
         let strMessage = data['datetime'] + "-[" + data['username'] + "]" + data['message'];
         // メッセージ出力
         let elementLi = document.createElement("li");
+        elementLi.classList.add('list-group-item');
         elementLi.textContent = strMessage;
         // g_elementListMessage.prepend(elementLi);
         g_elementListMessage.append(elementLi);
@@ -117,7 +139,3 @@
         console.error("Unexpected: Chat socket closed");
     }
 </script>
-
-</body>
-
-</html>
