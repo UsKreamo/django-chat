@@ -1,48 +1,118 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
     <title>My Chat</title>
+    <!-- bootstrap5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <h1>My Chat</h1>
+    <div class="container">
+        <div id="join_screen">
+            <h1>ロビー</h1>
+            <form action="" onsubmit="onsubmitButton_JoinChat(); return false;" style="text-align: center; width: 100%;">
+                名前<br />
+                <input type="text" id="input_username" placeholder="名前を入力" autofocus><br /><br />
+                <input type="submit" value="入室" />
+            </form>
+        </div>
 
-    <!-- エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
-    ボタン押下(=submit)時にページリロードが行われないように、onsubmitの設定の最後に"return false;"を追加。-->
-    <form action="" onsubmit="onsubmitButton_Send();return false;">
-        Message : <input type="text" id="input_message" autocomplete="off" autofocus /><input type="submit" value="Send" />
-    </form>
-
-    <ul id="list_message"></ul>
+        <div id="chat_screen" class="d-none">
+            <h1>チャットルーム</h1>
+            <button onclick="onclickButton_LeaveChat()">退室</button>
+            名前 : <input type="text" id="text_username" readonly="readonly"><br />
+            <form action="" onsubmit="onsubmitButton_Send();return false;">
+                メッセージ : <input type="text" id="input_message" placeholder="メッセージを入力" autocomplete="off" autofocus /><input type="submit" value="送信" />
+            </form>
+            <ul id="list_message"></ul>
+        </div>
+    </div>
 
 <script>
+    // ----------
+    // Elements
+    // ----------
+    // 画面
+    const g_elementJoinScreen = document.getElementById("join_screen")
+    const g_elementChatScreen = document.getElementById("chat_screen")
+    // フィールド
+    const g_elementInputUserName = document.getElementById("input_username");
     const g_elementInputMessage = document.getElementById("input_message");
     const g_elementListMessage = document.getElementById("list_message");
-
+    const g_elementTextUserName = document.getElementById("text_username");
+    // websocket
     let ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
     const g_socket = new WebSocket(ws_scheme + "://" + window.location.host + "/ws/chat/");
     
+    // ----------
+    // ロビー画面
+    // ----------
+    // 入室
+    function onsubmitButton_JoinChat(){
+        // 名前セット
+        let strInputUserName = g_elementInputUserName.value;
+        if(!strInputUserName){
+            return;
+        }
+        g_elementTextUserName.value = strInputUserName;
+        // 入室（サーバ送信）
+        g_socket.send(JSON.stringify({"data_type": "join", "username": strInputUserName}));
+        // 表示切り替え
+        g_elementJoinScreen.classList.remove('d-block');
+        g_elementJoinScreen.classList.add('d-none');
+        g_elementChatScreen.classList.remove('d-none');
+        g_elementChatScreen.classList.add('d-block');
+    }
+
+    // ----------
+    // チャットルーム画面
+    // ----------
+    // 退室
+    function onclickButton_LeaveChat(){
+        // メッセージクリア
+        while(g_elementListMessage.firstChild){
+            g_elementListMessage.removeChild(g_elementListMessage.firstChild);
+        }
+        // 名前クリア
+        g_elementTextUserName.value = "";
+        // 退室（サーバ送信）
+        g_socket.send(JSON.stringify({"data_type": "leave"}));
+        // 表示切り替え
+        g_elementChatScreen.classList.remove('d-block');
+        g_elementChatScreen.classList.add('d-none');
+        g_elementJoinScreen.classList.remove('d-none');
+        g_elementJoinScreen.classList.add('d-block');
+    }
+
+    // メッセージ送信
     function onsubmitButton_Send(){
         let strMessage = g_elementInputMessage.value;
         if(!strMessage){
             return;
         }
-
+        // メッセージ送信
         g_socket.send(JSON.stringify({"message": strMessage}));
-        
+        // メッセージフィールドクリア
         g_elementInputMessage.value = "";
     }
-
+    // メッセージ受信
     g_socket.onmessage = (event) => {
+        if(!g_elementTextUserName.value){
+            return;
+        }
+        // メッセージを取得
         let data = JSON.parse(event.data);
-
-        let strMessage = data['message'];
-
+        // メッセージ整形
+        let strMessage = data['datetime'] + "-[" + data['username'] + "]" + data['message'];
+        // メッセージ出力
         let elementLi = document.createElement("li");
         elementLi.textContent = strMessage;
-        g_elementListMessage.prepend(elementLi);
+        // g_elementListMessage.prepend(elementLi);
+        g_elementListMessage.append(elementLi);
     }
-
+    // 切断
     g_socket.onclose = (event) => {
         console.error("Unexpected: Chat socket closed");
     }
