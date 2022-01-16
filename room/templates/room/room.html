@@ -9,11 +9,44 @@
 
     <!-- エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
     ボタン押下(=submit)時にページリロードが行われないように、onsubmitの設定の最後に"return false;"を追加。-->
-    <form action="" onsubmit="return false;">
+    <form action="" onsubmit="onsubmitButton_Send();return false;">
         Message : <input type="text" id="input_message" autocomplete="off" autofocus /><input type="submit" value="Send" />
     </form>
 
     <ul id="list_message"></ul>
+
+<script>
+    const g_elementInputMessage = document.getElementById("input_message");
+    const g_elementListMessage = document.getElementById("list_message");
+
+    let ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+    const g_socket = new WebSocket(ws_scheme + "://" + window.location.host + "/ws/chat/");
+    
+    function onsubmitButton_Send(){
+        let strMessage = g_elementInputMessage.value;
+        if(!strMessage){
+            return;
+        }
+
+        g_socket.send(JSON.stringify({"message": strMessage}));
+        
+        g_elementInputMessage.value = "";
+    }
+
+    g_socket.onmessage = (event) => {
+        let data = JSON.parse(event.data);
+
+        let strMessage = data['message'];
+
+        let elementLi = document.createElement("li");
+        elementLi.textContent = strMessage;
+        g_elementListMessage.prepend(elementLi);
+    }
+
+    g_socket.onclose = (event) => {
+        console.error("Unexpected: Chat socket closed");
+    }
+</script>
 
 </body>
 
